@@ -1,0 +1,53 @@
+version: '3.9'
+
+# Development override — only starts infrastructure services
+# Run apps with: npm run dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ci_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: competitor_intelligence
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: ci_redis_dev
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+
+  # pgAdmin for database management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ci_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@ci.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '5050:80'
+    depends_on:
+      - postgres
+
+  # Redis Commander (optional)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: ci_redis_commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - '8081:8081'
+    depends_on:
+      - redis
+
+volumes:
+  postgres_dev_data:

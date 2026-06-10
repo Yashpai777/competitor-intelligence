@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// COMPANIES
+// ============================================================
+
+model Company {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  name             String
+  description      String?
+  website          String
+  linkedinUrl      String?
+  twitterHandle    String?
+  youtubeChannel   String?
+  industry         String?  @default("AI Voice Agents")
+  foundedYear      Int?
+  headquarters     String?
+  employeeCount    String?
+  logo             String?
+  isActive         Boolean  @default(true)
+  threatScore      Int?     @default(0) // 0-100
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  sources          CompanySource[]
+  linkedinPosts    LinkedInPost[]
+  websiteSnapshots WebsiteSnapshot[]
+  websiteChanges   WebsiteChange[]
+  newsArticles     NewsArticle[]
+  customers        Customer[]
+  partnerships     Partnership[]
+  socialPosts      SocialPost[]
+  weeklyReports    WeeklyReport[]
+  alerts           Alert[]
+  battlecards      Battlecard[]
+
+  @@map("companies")
+}
+
+model CompanySource {
+  id         String   @id @default(cuid())
+  companyId  String
+  type       String   // linkedin, twitter, crunchbase, website, etc.
+  url        String
+  isActive   Boolean  @default(true)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_sources")
+}
+
+// ============================================================
+// LINKEDIN
+// ============================================================
+
+model LinkedInPost {
+  id               String   @id @default(cuid())
+  companyId        String
+  postUrl          String?  @unique
+  content          String
+  publishedAt      DateTime
+  likes            Int      @default(0)
+  comments         Int      @default(0)
+  shares           Int      @default(0)
+  views            Int?
+  engagementScore  Float    @default(0)
+  topicCategory    String?  // product, hiring, partnership, customer, funding, culture, thought_leadership
+  isViral          Boolean  @default(false)
+  imageUrls        String[]
+  aiSummary        String?
+  aiPerformanceReason String?
+  rawData          Json?
+  scrapedAt        DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, publishedAt])
+  @@map("linkedin_posts")
+}
+
+// ============================================================
+// WEBSITE MONITORING
+// ============================================================
+
+model WebsiteSnapshot {
+  id           String   @id @default(cuid())
+  companyId    String
+  pageType     String   // homepage, pricing, product, integrations, blog, docs
+  url          String
+  htmlContent  String?
+  textContent  String?
+  screenshotUrl String?
+  checksum     String?
+  statusCode   Int?
+  capturedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  changes      WebsiteChange[]
+
+  @@index([companyId, pageType, capturedAt])
+  @@map("website_snapshots")
+}
+
+model WebsiteChange {
+  id               String   @id @default(cuid())
+  companyId        String
+  snapshotId       String?
+  pageType         String
+  url              String
+  changeType       String   // addition, removal, modification, new_page, price_change
+  importance       Int      @default(0) // 0-100
+  diffSummary      String?
+  beforeContent    String?
+  afterContent     String?
+  beforeScreenshot String?
+  afterScreenshot  String?
+  aiSummary        String?
+  detectedAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  company          Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  snapshot         WebsiteSnapshot? @relation(fields: [snapshotId], references: [id])
+
+  @@index([companyId, detectedAt])
+  @@map("website_changes")
+}
+
+// ============================================================
+// NEWS
+// ============================================================
+
+model NewsArticle {
+  id           String   @id @default(cuid())
+  companyId    String
+  title        String
+  url          String   @unique
+  source       String
+  excerpt      String?
+  content      String?
+  imageUrl     String?
+  category     String   // funding, partnership, customer, product_launch, hiring, award, acquisition, mention
+  sentiment    String?  // positive, neutral, negative
+  importance   Int      @default(0) // 0-100
+  publishedAt  DateTime
+  scrapedAt    DateTime @default(now())
+  aiSummary    String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, publishedAt])
+  @@map("news_articles")
+}
+
+// ============================================================
+// CUSTOMERS & PARTNERSHIPS
+// ============================================================
+
+model Customer {
+  id           String   @id @default(cuid())
+  companyId    String
+  customerName String
+  logoUrl      String?
+  website      String?
+  industry     String?
+  source       String   // website, case_study, testimonial, linkedin, news
+  sourceUrl    String?
+  detectedAt   DateTime @default(now())
+  description  String?
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("customers")
+}
+
+model Partnership {
+  id           String   @id @default(cuid())
+  companyId    String
+  partnerName  String
+  partnerLogo  String?
+  partnerWebsite String?
+  type         String?  // technology, reseller, integration, strategic
+  source       String
+  sourceUrl    String?
+  description  String?
+  announcedAt  DateTime?
+  detectedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("partnerships")
+}
+
+// ============================================================
+// SOCIAL MONITORING
+// ============================================================
+
+model SocialPost {
+  id              String   @id @default(cuid())
+  companyId       String
+  platform        String   // twitter, reddit, youtube, product_hunt
+  postId          String?
+  postUrl         String?
+  content         String
+  authorHandle    String?
+  authorName      String?
+  likes           Int      @default(0)
+  comments        Int      @default(0)
+  shares          Int      @default(0)
+  views           Int?
+  engagementScore Float    @default(0)
+  sentiment       String?
+  topicCategory   String?
+  publishedAt     DateTime
+  scrapedAt       DateTime @default(now())
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, platform, publishedAt])
+  @@map("social_posts")
+}
+
+// ============================================================
+// WEEKLY REPORTS
+// ============================================================
+
+model WeeklyReport {
+  id              String   @id @default(cuid())
+  companyId       String?  // null = global report
+  weekStart       DateTime
+  weekEnd         DateTime
+
+  // Metrics
+  linkedinPostCount      Int @default(0)
+  linkedinEngagement     Int @default(0)
+  websiteChanges         Int @default(0)
+  newsArticles           Int @default(0)
+  newCustomers           Int @default(0)
+  newPartnerships        Int @default(0)
+  threatScore            Int @default(0) // 0-100
+
+  // AI Content
+  executiveSummary       String?
+  linkedinSummary        String?
+  websiteSummary         String?
+  newsSummary            String?
+  strategicInsights      String?
+  competitiveThreats     String?
+
+  // Raw Data
+  rawData                Json?
+
+  generatedAt            DateTime @default(now())
+  createdAt              DateTime @default(now())
+
+  company                Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, weekStart])
+  @@map("weekly_reports")
+}
+
+// ============================================================
+// BATTLECARDS
+// ============================================================
+
+model Battlecard {
+  id                   String   @id @default(cuid())
+  companyId            String   @unique
+
+  // Structured content
+  strengths            String[]
+  weaknesses           String[]
+  recentUpdates        String[]
+  howWeCompare         String[]
+  objectionHandling    Json?    // { objection: string, response: string }[]
+  positioningRecs      String[]
+
+  // Pricing intelligence
+  pricingModel         String?
+  pricingNotes         String?
+
+  // Target market
+  targetIndustries     String[]
+  targetCompanySize    String?
+
+  // AI summary
+  aiSummary            String?
+  talkingPoints        String[]
+
+  generatedAt          DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  createdAt            DateTime @default(now())
+
+  company              Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("battlecards")
+}
+
+// ============================================================
+// ALERTS
+// ============================================================
+
+model Alert {
+  id          String   @id @default(cuid())
+  companyId   String?
+  type        String   // funding, customer, partnership, feature, website_change, viral_post
+  severity    String   @default("low") // low, medium, high, critical
+  title       String
+  description String
+  sourceUrl   String?
+  metadata    Json?
+  isRead      Boolean  @default(false)
+  isSent      Boolean  @default(false)
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@index([isRead])
+  @@map("alerts")
+}
+
+// ============================================================
+// SCRAPING JOBS / AUDIT
+// ============================================================
+
+model ScrapingJob {
+  id          String   @id @default(cuid())
+  companyId   String?
+  jobType     String   // website, linkedin, news, social
+  status      String   @default("pending") // pending, running, completed, failed
+  startedAt   DateTime?
+  completedAt DateTime?
+  errorMessage String?
+  itemsFound  Int      @default(0)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, jobType])
+  @@map("scraping_jobs")
+}
