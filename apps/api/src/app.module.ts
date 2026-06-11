@@ -34,7 +34,7 @@ import { QueuesModule } from './queues/queues.module';
     ]),
     BullModule.forRootAsync({
       useFactory: () => ({
-        redis: {
+        redis: process.env.REDIS_URL || {
           host: process.env.REDIS_HOST || 'localhost',
           port: parseInt(process.env.REDIS_PORT || '6379'),
         },
