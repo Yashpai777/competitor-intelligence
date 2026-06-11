@@ -19,7 +19,7 @@ RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
 RUN cd packages/database && npx tsc
 
 # Compile API with tsc directly (bypasses nest build)
-RUN cd apps/api && npx tsc -p tsconfig.json --skipLibCheck
+RUN cd apps/api && npx tsc -p tsconfig.build.json --skipLibCheck
 
 # Verify dist exists
 RUN test -f apps/api/dist/main.js && echo "BUILD OK" || (echo "DIST MISSING - listing:" && ls -la apps/api/ && exit 1)
