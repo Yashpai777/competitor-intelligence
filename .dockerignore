@@ -1,0 +1,18 @@
+# Ignore everything by default, then whitelist what the build needs
+**
+
+# Root manifests
+!package.json
+!package-lock.json
+
+# API workspace
+!apps/api/
+apps/api/node_modules/
+apps/api/dist/
+
+# Database package
+!packages/database/
+packages/database/node_modules/
+
+# Explicitly exclude the web app — it is not part of the API build
+apps/web/
