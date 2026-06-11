@@ -148,7 +148,7 @@ export class LinkedInService {
     }, {});
 
     const trends = Object.entries(topicCounts)
-      .sort(([, a], [, b]) => b - a)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
       .map(([topic, count]) => ({ topic, count }));
 
     return trends;
