@@ -4,7 +4,6 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-# Copy workspace files
 COPY package*.json ./
 COPY turbo.json ./
 COPY packages/ ./packages/
@@ -16,14 +15,14 @@ RUN npm install --include=dev
 # Generate Prisma client
 RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
 
-# Build database package first (compile TS -> JS so Node can require it)
+# Build database package -> JS
 RUN cd packages/database && npx tsc
 
-# Build NestJS API
-RUN cd apps/api && npx nest build
+# Compile API with tsc directly (bypasses nest build)
+RUN cd apps/api && npx tsc -p tsconfig.json --skipLibCheck
 
-# Verify dist was created
-RUN ls apps/api/dist/main.js
+# Verify dist exists
+RUN test -f apps/api/dist/main.js && echo "BUILD OK" || (echo "DIST MISSING - listing:" && ls -la apps/api/ && exit 1)
 
 EXPOSE 3001
 
